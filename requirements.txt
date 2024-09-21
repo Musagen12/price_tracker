@@ -1,0 +1,11 @@
+fake_useragent
+blinker<1.8.0
+requests_html
+selenium
+selenium-wire
+lxml_html_clean
+requests
+python-dotenv
+fastapi[standard]
+gunicorn
+pydantic
