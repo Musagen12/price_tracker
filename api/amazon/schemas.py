@@ -6,9 +6,9 @@ class Product(BaseModel):
     name: str
     price: float
     rating: float
+    in_stock: str
     url: HttpUrl
     image_url: HttpUrl
-    in_stock: str
 
 class ProductList(BaseModel):
     products: List[Product]
