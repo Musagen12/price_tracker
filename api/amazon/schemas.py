@@ -14,6 +14,16 @@ class CommentInput(BaseModel):
 class SearchInput(BaseModel):
     query: str
 
+class TrackedUrlInput(BaseModel):
+    url: HttpUrl
+
+class TrackedUrlResponse(BaseModel):
+    id: str
+    url: HttpUrl
+
+    class Config:
+        from_attributes = True
+
 class Product(BaseModel):
     asin: str
     name: str

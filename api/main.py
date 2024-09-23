@@ -1,5 +1,9 @@
 from fastapi import FastAPI
 from .amazon import amazon
+from .database import SessionLocal, engine
+from .amazon import amazon_models
+
+amazon_models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 

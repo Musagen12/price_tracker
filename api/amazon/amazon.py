@@ -1,5 +1,7 @@
-from fastapi import APIRouter, HTTPException
-from . import schemas
+from fastapi import APIRouter, HTTPException, Depends
+from . import schemas, queries
+from ..database import get_db
+from sqlalchemy.orm import Session
 from api.scrappers.amazon.comments import get_comments  
 from api.scrappers.amazon.search import amazon_search
 
@@ -8,21 +10,21 @@ router = APIRouter(
     tags=["Amazon"]
 )
 
-# @router.post("/search")
-# def search(search_input: schemas.SearchInput):
-#     query = search_input.query
-#     product_data = amazon_search(query)
-#     response = schemas.ProductList(**product_data)
-#     return response
 
-@router.post("/search")
+@router.post("/search", status_code=200)
 def search(search_input: schemas.SearchInput):
     query = search_input.query
     product_list = amazon_search(query)
     return product_list
 
 
-@router.post("/get_comments")
+@router.post("/add_tracked_url", response_model=schemas.TrackedUrlResponse, status_code=201)
+def add_tracked_url(url: schemas.TrackedUrlInput, db: Session = Depends(get_db)):
+    tracked_url = queries.input_url(url, db)
+    return tracked_url
+
+
+@router.post("/get_comments", status_code=200)
 def get_amazon_comments(comment_input: schemas.CommentInput):
     try:
         comments = get_comments(url=str(comment_input.url))
