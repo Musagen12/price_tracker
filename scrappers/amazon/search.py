@@ -113,7 +113,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from requests_html import HTML
-from ...amazon import schemas
+from api.amazon import schemas
+
 
 # Generate a random user agent
 useragent = UserAgent()

@@ -1,31 +1,25 @@
 import time
+import re
 from fake_useragent import UserAgent
-from seleniumwire import webdriver  
+from selenium import webdriver  
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-from requests_html import HTML
 
 useragent = UserAgent()
-
-def interceptor(request):
-    request.headers["Accept-Language"] = "en-US,en;q=0.9"
-    request.headers["Referer"] = "https://www.google.com/"
-    request.headers["User-Agent"] = useragent.random  
 
 def get_product_details(search_query: str, max_pages: int = 6):
     base_url = "https://www.jumia.co.ke/catalog/?q=" + search_query + "&page="
     
     chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.page_load_strategy = "normal"
 
     driver = webdriver.Chrome(options=chrome_options)
-    driver.request_interceptor = interceptor
-
     products = []
     
     try:
@@ -35,17 +29,23 @@ def get_product_details(search_query: str, max_pages: int = 6):
             driver.get(page_url)
             
             # Wait for the search results to load
-            WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "div.-paxs"))
-            )
-            time.sleep(3)  # Let the page fully load
+            try:
+                WebDriverWait(driver, 30).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.-paxs"))
+                )
+            except TimeoutException:
+                print(f"Timeout waiting for elements on page {current_page}.")
+                continue
+            
+            time.sleep(3)  # Allow the page to load
 
-            # Get the page source and parse it with requests_html.HTML
+            # Get the page source and check for loaded content
             html_str = driver.page_source
-            html_object = HTML(html=html_str)
-
+            print(f"Page {current_page} source length: {len(html_str)}")  # Check if the page source is loaded
+            
             # Find all products
-            product_cards = html_object.find('article.prd')
+            product_cards = driver.find_elements(By.CSS_SELECTOR, "article.prd")
+            print(f"Found {len(product_cards)} products on page {current_page}.")  # Debug info
 
             # Stop scraping if no products found
             if not product_cards:
@@ -55,15 +55,14 @@ def get_product_details(search_query: str, max_pages: int = 6):
             # Loop through each product and extract details
             for product in product_cards:
                 try:
-                    name = product.find('h3.name', first=True).text
-                    price = product.find('div.prc', first=True).text
-                    rating_element = product.find('div.stars', first=True)
+                    name = product.find_element(By.CSS_SELECTOR, 'h3.name').text
+                    price_str = product.find_element(By.CSS_SELECTOR, 'div.prc').text
+                    price = re.search(r'\d+', price_str.replace(",", "")).group()  # Extract price
+                    rating_element = product.find_element(By.CSS_SELECTOR, 'div.stars')
                     rating = rating_element.text if rating_element else "No rating"
-                    in_stock = product.find('p.-fs12', first=True).text if product.find('p.-fs12', first=True) else "In stock"
-                    image_url = product.find('img.img', first=True).attrs.get('data-src')
-                    product_url = product.find('a.core', first=True).attrs.get('href')
-                    full_product_url = "https://www.jumia.co.ke" + product_url
-                    brand = product.find('a.core', first=True).attrs.get('data-gtm-brand', 'Unknown')
+                    in_stock = product.find_element(By.CSS_SELECTOR, 'p.-fs12').text if product.find_elements(By.CSS_SELECTOR, 'p.-fs12') else "In stock"
+                    image_url = product.find_element(By.CSS_SELECTOR, 'img.img').get_attribute('data-src')
+                    product_url = product.find_element(By.CSS_SELECTOR, 'a.core').get_attribute('href')
 
                     products.append({
                         'name': name,
@@ -71,14 +70,12 @@ def get_product_details(search_query: str, max_pages: int = 6):
                         'rating': rating,
                         'in_stock': in_stock,
                         'image_url': image_url, 
-                        'brand': brand,
-                        'url': full_product_url
+                        'url': product_url
                     })
                 except Exception as e:
-                    print(f"Error extracting product details on page {current_page} for product: {product.html}. Error: {e}")
+                    print(f"Error extracting product details on page {current_page}: {e}")
 
-    except TimeoutException as e:
-        print(f"TimeoutException: {e}")
+            time.sleep(2)  # Delay between page requests to avoid rate limiting
 
     finally:
         driver.quit()

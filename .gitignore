@@ -2,3 +2,5 @@
 /project
 .env
 .gitignore
+hackathon.db
+celerybeat-schedule.db

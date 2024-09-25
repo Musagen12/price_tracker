@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from . import schemas, queries
 from ..database import get_db
 from sqlalchemy.orm import Session
-from api.scrappers.amazon.comments import get_comments  
-from api.scrappers.amazon.search import amazon_search
+from scrappers.amazon.comments import get_comments  
+from scrappers.amazon.search import amazon_search
 
 router = APIRouter(
     prefix="/amazon",

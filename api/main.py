@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .amazon import amazon
+from .amazon import amazon_routers
 from .database import SessionLocal, engine
 from .amazon import amazon_models
 
@@ -15,4 +15,4 @@ def root():
 def api_status():
     return {"Status": "Up an running!!!!!!!"}
 
-app.include_router(amazon.router)
+app.include_router(amazon_routers.router)
