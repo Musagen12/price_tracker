@@ -31,7 +31,7 @@ We welcome contributions! Feel free to fork the repo and submit a pull request. 
 
 ## 📬 Contact
 
-For questions or suggestions, please reach out at [your-email@example.com].
+For questions or suggestions, please raise an issue.
 
 ## 📄 License
 
