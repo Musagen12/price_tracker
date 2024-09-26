@@ -24,13 +24,14 @@ class TrackedUrlResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class Product(BaseModel):
     name: str
-    price: float
+    price: str  
     rating: str
     in_stock: str
-    url: HttpUrl
     image_url: HttpUrl
+    url: HttpUrl 
 
 class ProductList(BaseModel):
     products: List[Product]

@@ -1,16 +1,16 @@
 import time
 import re
-from fake_useragent import UserAgent
 from selenium import webdriver  
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-
-useragent = UserAgent()
+from requests_html import HTML
+from api.jumia import schemas
 
 def get_product_details(search_query: str, max_pages: int = 6):
     base_url = "https://www.jumia.co.ke/catalog/?q=" + search_query + "&page="
+    site_url = "https://www.jumia.co.ke"
     
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--headless")
@@ -28,45 +28,39 @@ def get_product_details(search_query: str, max_pages: int = 6):
             print(f"Scraping page {current_page}: {page_url}")
             driver.get(page_url)
             
-            # Wait for the search results to load
             try:
                 WebDriverWait(driver, 30).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, "div.-paxs"))
                 )
             except TimeoutException:
-                print(f"Timeout waiting for elements on page {current_page}.")
                 continue
             
-            time.sleep(3)  # Allow the page to load
+            time.sleep(3)  
 
-            # Get the page source and check for loaded content
             html_str = driver.page_source
-            print(f"Page {current_page} source length: {len(html_str)}")  # Check if the page source is loaded
+            html = HTML(html=html_str)
             
-            # Find all products
-            product_cards = driver.find_elements(By.CSS_SELECTOR, "article.prd")
-            print(f"Found {len(product_cards)} products on page {current_page}.")  # Debug info
+            product_cards = html.find("article.prd")
 
-            # Stop scraping if no products found
             if not product_cards:
-                print(f"No products found on page {current_page}. Stopping.")
                 break
 
-            # Loop through each product and extract details
             for product in product_cards:
                 try:
-                    name = product.find_element(By.CSS_SELECTOR, 'h3.name').text
-                    price_str = product.find_element(By.CSS_SELECTOR, 'div.prc').text
-                    price = re.search(r'\d+', price_str.replace(",", "")).group()  # Extract price
-                    rating_element = product.find_element(By.CSS_SELECTOR, 'div.stars')
-                    rating = rating_element.text if rating_element else "No rating"
-                    in_stock = product.find_element(By.CSS_SELECTOR, 'p.-fs12').text if product.find_elements(By.CSS_SELECTOR, 'p.-fs12') else "In stock"
-                    image_url = product.find_element(By.CSS_SELECTOR, 'img.img').get_attribute('data-src')
-                    product_url = product.find_element(By.CSS_SELECTOR, 'a.core').get_attribute('href')
+                    name = product.find('h3.name', first=True).text
+                    price_str = product.find('div.prc', first=True).text
+                    rating_element = product.find('div.stars._s', first=True)
+                    rating = rating_element.text.split(' ')[0] if rating_element else "No rating"  # Get the numeric part of the rating
+
+                    in_stock = product.find('p.-fs12', first=True).text if product.find('p.-fs12') else "In stock"
+                    image_url = product.find('img.img', first=True).attrs.get('data-src', '')
+                    product_url_str = product.find('a.core', first=True).attrs.get('href', '')
+                    product_url = site_url + product_url_str
+
 
                     products.append({
                         'name': name,
-                        'price': price,
+                        'price': price_str,
                         'rating': rating,
                         'in_stock': in_stock,
                         'image_url': image_url, 
@@ -75,7 +69,7 @@ def get_product_details(search_query: str, max_pages: int = 6):
                 except Exception as e:
                     print(f"Error extracting product details on page {current_page}: {e}")
 
-            time.sleep(2)  # Delay between page requests to avoid rate limiting
+            time.sleep(2)  
 
     finally:
         driver.quit()
@@ -85,7 +79,7 @@ def get_product_details(search_query: str, max_pages: int = 6):
 def jumia_search(search_query: str):
     products = get_product_details(search_query, max_pages=6)
 
-    for product in products:
-        print(product)
-
-jumia_search(search_query="lenovo")
+    product_data = {"products": products}
+    
+    product_list = schemas.ProductList(**product_data)
+    return product_list

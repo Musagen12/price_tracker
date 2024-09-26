@@ -19,7 +19,7 @@ def initialize_driver():
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--headless")
+    # chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
 
     driver = webdriver.Chrome(options=chrome_options)
@@ -46,11 +46,12 @@ def get_comments_on_page(driver):
     
     return comments
 
-# Function to click "Next" button and iterate over pages
-def click_next_button_until_last(driver):
+# Function to click "Next" button and iterate over pages with a limit
+def click_next_button_until_last(driver, max_pages=10):
     all_comments = []
     page_number = 1
-    while True:
+
+    while page_number <= max_pages:
         try:
             comments = get_comments_on_page(driver)
             all_comments.extend(comments)
@@ -111,5 +112,3 @@ def get_comments(url: str):
         raise e
     finally:
         driver.quit()
-
-# https://www.amazon.com/dp/B0D8L1RLD5

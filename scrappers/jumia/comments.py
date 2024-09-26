@@ -54,13 +54,13 @@ def extract_reviews(driver):
     reviews_data = []
     for review in reviews:
         try:
-            rating = review.find_element(By.CSS_SELECTOR, ".stars").text.split(" ")[0]
-            title = review.find_element(By.CSS_SELECTOR, "h3").text
-            body = review.find_element(By.CSS_SELECTOR, "p").text
-            date_user = review.find_element(By.CSS_SELECTOR, ".-pvs").text
-            review_data = (rating, title, body, date_user)
+            rating = review.find_element(By.CSS_SELECTOR, ".stars").text.split(" ")[0]  # Extract the rating
+            title = review.find_element(By.CSS_SELECTOR, "h3").text  # Extract the review title
+            body = review.find_element(By.CSS_SELECTOR, "p").text  # Extract the review body
+            date_user = review.find_element(By.CSS_SELECTOR, ".-pvs").text  # Extract the date and user information
+            review_data = {"rating": rating, "title": title, "body": body, "date_user": date_user}  # Store in dict
             reviews_data.append(review_data)
-            print(f"Rating: {rating}, Title: {title}, Review: {body}, Date/User: {date_user}")
+            # print(f"Rating: {rating}, Title: {title}, Review: {body}, Date/User: {date_user}")
         except NoSuchElementException:
             continue
     return reviews_data
@@ -73,16 +73,15 @@ def extract_all_reviews(url):
     
     if not review_url:
         print("Failed to navigate to the reviews section.")
-        return
+        return []
 
     # To store reviews for comparison across pages
+    all_reviews = []
     last_page_reviews = []
-    
+
     # Step 2: Extract reviews from the first page
     current_page_reviews = extract_reviews(driver)
-    if current_page_reviews == last_page_reviews:
-        print("No more unique reviews found.")
-        return
+    all_reviews.extend(current_page_reviews)  # Add first page reviews
 
     # Step 3: Start looping through pages starting from page 2
     page_number = 2
@@ -103,6 +102,7 @@ def extract_all_reviews(url):
 
             # Save the current page reviews for the next comparison
             last_page_reviews = current_page_reviews
+            all_reviews.extend(current_page_reviews)  # Add reviews from the current page
 
             # Increment page number to move to the next page
             page_number += 1
@@ -112,8 +112,7 @@ def extract_all_reviews(url):
             break
 
     driver.quit()
+    return all_reviews  # Return all collected reviews
 
 def get_jumia_comments(url: str):
-    extract_all_reviews(url)
-
-get_jumia_comments(url='https://www.jumia.co.ke/maybelline-fit-me-matte-and-poreless-foundation-30-ml-356-warm-coconut-7086166.html')
+    return extract_all_reviews(url)  # Return the reviews from the URL
