@@ -8,7 +8,7 @@ from selenium.common.exceptions import TimeoutException
 from requests_html import HTML
 from api.jumia import schemas
 
-def get_product_details(search_query: str, max_pages: int = 6):
+def get_product_details(search_query: str, max_pages: int = 10):
     base_url = "https://www.jumia.co.ke/catalog/?q=" + search_query + "&page="
     site_url = "https://www.jumia.co.ke"
     
@@ -77,7 +77,7 @@ def get_product_details(search_query: str, max_pages: int = 6):
     return products
 
 def jumia_search(search_query: str):
-    products = get_product_details(search_query, max_pages=6)
+    products = get_product_details(search_query, max_pages=10)
 
     product_data = {"products": products}
     

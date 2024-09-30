@@ -1,5 +1,5 @@
 from pydantic import BaseModel, HttpUrl, validator, ValidationError
-from typing import List
+from typing import List, Optional
 
 class CommentInput(BaseModel):
     url: HttpUrl
@@ -31,7 +31,7 @@ class Product(BaseModel):
     rating: str
     in_stock: str
     image_url: HttpUrl
-    url: HttpUrl 
+    url: Optional[HttpUrl] = None
 
 class ProductList(BaseModel):
     products: List[Product]

@@ -1,6 +1,7 @@
 from fastapi import Depends
+from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import Column, Integer, String, Float, inspect
+from sqlalchemy import Column, Integer, String, Float, inspect, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from scrappers.jumia.individual import get_individual_jumia_item  # Ensure this function is async
 from ..database import get_db
@@ -29,6 +30,7 @@ def create_table_for_uuid(engine, uuid_str):
             rating = Column(String)
             image_source = Column(String)
             price = Column(Float)
+            timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
         dynamic_tables[uuid_str] = _UUIDData
         return _UUIDData
@@ -44,6 +46,7 @@ def create_table_for_uuid(engine, uuid_str):
             rating = Column(String)
             image_source = Column(String)
             price = Column(Float)
+            timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
         dynamic_tables[uuid_str] = _UUIDData
 

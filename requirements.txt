@@ -10,3 +10,9 @@ fastapi[standard]
 gunicorn
 pydantic
 sqlalchemy
+celery
+uvicorn
+setuptools
+pypdf
+langchain[llms]
+chromadb

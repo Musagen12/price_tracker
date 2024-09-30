@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from ai import ai_router
 from .amazon import amazon_routers
 from .jumia import jumia_routers
 from .database import SessionLocal, engine
@@ -20,3 +21,4 @@ def api_status():
 
 app.include_router(amazon_routers.router)
 app.include_router(jumia_routers.router)
+app.include_router(ai_router.router)

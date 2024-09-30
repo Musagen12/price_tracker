@@ -1,6 +1,7 @@
 from fastapi import Depends
+from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import Column, Integer, String, Float, inspect
+from sqlalchemy import Column, Integer, String, Float, inspect, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from scrappers.amazon.individual import get_individual_amazon_item
 from ..database import get_db
@@ -31,6 +32,7 @@ def create_table_for_uuid(engine, uuid_str):
             rating = Column(String)
             image_source = Column(String)
             price = Column(Float)
+            timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
         dynamic_tables[uuid_str] = _UUIDData  # Store the class
         return _UUIDData  # Return the class
@@ -47,6 +49,7 @@ def create_table_for_uuid(engine, uuid_str):
             rating = Column(String)
             image_source = Column(String)
             price = Column(Float)
+            timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
         dynamic_tables[uuid_str] = _UUIDData  # Store the class
 
@@ -129,5 +132,5 @@ def automate(db: Session = Depends(get_db)):
 
 
 
-# celery -A scheduler.main.celery_app beat --loglevel=info
-# celery -A scheduler.main.celery_app worker --loglevel=info
+# celery -A scheduler.celery.celery_app beat --loglevel=info
+# celery -A scheduler.celery.celery_app worker --loglevel=info

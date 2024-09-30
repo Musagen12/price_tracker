@@ -1,5 +1,5 @@
 /api/__pycache__
-/project
+/env
 .env
 .gitignore
 hackathon.db

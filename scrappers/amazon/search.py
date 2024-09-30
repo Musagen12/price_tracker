@@ -19,7 +19,7 @@ def interceptor(request):
     request.headers["Referer"] = "https://www.google.com/"
     request.headers["User-Agent"] = useragent.random  
 
-def get_product_details(search_query: str, max_pages: int = 6):
+def get_product_details(search_query: str, max_pages: int = 10):
     base_url = "https://www.amazon.com/s?k=" + search_query.replace(' ', '+') + "&page="
 
     chrome_options = webdriver.ChromeOptions()
@@ -100,7 +100,7 @@ def get_product_details(search_query: str, max_pages: int = 6):
     return products
 
 def amazon_search(search_query: str):
-    products = get_product_details(search_query, max_pages=6)
+    products = get_product_details(search_query, max_pages=10)
     
     product_data = {"products": products}
     
