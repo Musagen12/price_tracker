@@ -1,14 +1,14 @@
-from pydantic import BaseModel, HttpUrl, validator, ValidationError
+from pydantic import BaseModel, HttpUrl, field_validator, ValidationError
 from typing import List
 
 class CommentInput(BaseModel):
     url: HttpUrl
     file_name: str
 
-    @validator('file_name')
+    @field_validator('file_name')
     def check_pdf_extension(cls, value):
-        if not value.endswith('.pdf'):
-            raise ValueError("File must have a .pdf extension")
+        if not value.endswith('.txt'):
+            raise ValueError("File must have a .txt extension")
         return value
 
 class SearchInput(BaseModel):

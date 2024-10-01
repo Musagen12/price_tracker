@@ -14,5 +14,8 @@ celery
 uvicorn
 setuptools
 pypdf
+PyPDF2
 langchain[llms]
+langchain-community
 chromadb
+langchain-chroma

@@ -4,3 +4,7 @@
 .gitignore
 hackathon.db
 celerybeat-schedule.db
+/.lightning_studio
+/.ollama
+/.pki
+/.th-client
