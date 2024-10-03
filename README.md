@@ -12,6 +12,7 @@ This project is currently **ongoing**. We're continuously improving the function
 - **Product Data Scraping**: Efficiently scrapes product details from Jumia and Amazon.
 - **Automated Task Scheduling**: Uses Celery to automate scraping tasks every 20 minutes.
 - **Asynchronous Processing**: Utilizes async functions for concurrent URL processing, speeding up data retrieval.
+- **Comment analysis using llms**: Analyzes the comments using llms.
 
 ## 🛠️ Technologies Used
 
