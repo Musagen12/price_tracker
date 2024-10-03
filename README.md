@@ -20,6 +20,8 @@ This project is currently **ongoing**. We're continuously improving the function
 - **Celery**: For task scheduling.
 - **Redis**: As a message broker for Celery.
 - **Asyncio**: For handling asynchronous operations.
+- **Langchain**: For interacting with the llm.
+- **Chroma**: For creating a vector database for the llm to query.
 
 ## 📦 Installation
 
