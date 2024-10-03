@@ -17,6 +17,8 @@ This project is currently **ongoing**. We're continuously improving the function
 
 - **FastAPI**: For building the web application and API.
 - **SQLAlchemy**: For database interactions.
+- **Selenium and Selenium-wire**: For browser automation.
+- **Requests-html**: For getting specific data.
 - **Celery**: For task scheduling.
 - **Redis**: As a message broker for Celery.
 - **Asyncio**: For handling asynchronous operations.
