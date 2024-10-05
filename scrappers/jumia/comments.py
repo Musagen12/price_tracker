@@ -3,36 +3,38 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from requests_html import HTML
 from fake_useragent import UserAgent
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
 
-# Set up ChromeOptions for faster execution
-useragent = UserAgent()
-random_useragent = useragent.random
+def create_driver():
+    useragent = UserAgent()
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument(f"user-agent={useragent.random}")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_argument("--blink-settings=imagesEnabled=false")
 
-chrome_options = webdriver.ChromeOptions()
-chrome_options.add_argument(f"user-agent={random_useragent}")
-chrome_options.add_argument("--disable-gpu")
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # Disable image loading to save bandwidth
+    return webdriver.Chrome(options=chrome_options)
 
-# Initialize WebDriver globally for reuse
-driver = webdriver.Chrome(options=chrome_options)
+def extract_product_details(html_object):
+    product_details = {
+        'title': html_object.find('h1', first=True).text if html_object.find('h1', first=True) else 'No Title Found',
+        'description': html_object.find('div.markup', first=True).text if html_object.find('div.markup', first=True) else 'No Description Found',
+        'features': [feature.text for feature in html_object.find('ul li')] if html_object.find('ul li') else 'No Features Found',
+    }
+    return product_details
 
 def click_see_all_button(driver):
     try:
-        # Reduced timeout to speed up failure detection
-        see_all_button = WebDriverWait(driver, 5).until(
+        see_all_button = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/catalog/productratingsreviews/sku/']"))
         )
         href = see_all_button.get_attribute('href')
-        full_link = href if href.startswith('http') else "https://www.jumia.co.ke" + href
-        driver.get(full_link)
-        return full_link
+        return href if href.startswith('http') else "https://www.jumia.co.ke" + href
     except (NoSuchElementException, TimeoutException):
         return None
 
@@ -45,22 +47,21 @@ def extract_reviews(driver):
                 rating = review.find_element(By.CSS_SELECTOR, ".stars").text.split(" ")[0]
                 title = review.find_element(By.CSS_SELECTOR, "h3").text
                 body = review.find_element(By.CSS_SELECTOR, "p").text
-                date_user = review.find_element(By.CSS_SELECTOR, ".-pvs").text
-                reviews_data.append({"rating": rating, "title": title, "body": body, "date_user": date_user})
+                reviews_data.append({"rating": rating, "title": title, "body": body})
             except NoSuchElementException:
                 continue
     except Exception as e:
-        print(f"Error extracting reviews: {e}")
+        return []
     return reviews_data
 
-def fetch_page_reviews(review_url, page_number):
+def fetch_page_reviews(driver, review_url, page_number):
     try:
         driver.get(f"{review_url}?page={page_number}")
         return extract_reviews(driver)
     except Exception as e:
         return []
 
-def extract_all_reviews(url):
+def extract_all_reviews(driver, url):
     driver.get(url)
     review_url = click_see_all_button(driver)
     
@@ -69,9 +70,8 @@ def extract_all_reviews(url):
 
     all_reviews = extract_reviews(driver)
 
-    # Parallel processing of additional pages
     with ThreadPoolExecutor(max_workers=6) as executor:
-        futures = {executor.submit(fetch_page_reviews, review_url, page): page for page in range(2, 6)}
+        futures = {executor.submit(fetch_page_reviews, driver, review_url, page): page for page in range(2, 6)}
         
         for future in as_completed(futures):
             page_reviews = future.result()
@@ -79,12 +79,24 @@ def extract_all_reviews(url):
                 break
             all_reviews.extend(page_reviews)
 
-    driver.quit()
     return all_reviews
 
-def get_jumia_comments(url: str):
+def get_jumia_product_info(url: str):
+    driver = create_driver()
     try:
-        reviews = extract_all_reviews(url)
-        return {"message": "No reviews found."} if not reviews else reviews
+        driver.get(url)
+        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.row")))
+
+        html_str = driver.page_source
+        html_object = HTML(html=html_str)
+
+        product_details = extract_product_details(html_object)
+        reviews = extract_all_reviews(driver, url)
+
+        return {"product_details": product_details, "reviews": reviews if reviews else "No reviews found."}
+    
     except Exception as e:
-        return {"error": str(e), "message": "Error occurred while fetching the reviews."}
+        return {"error": str(e), "message": "Error occurred while fetching the product details and reviews."}
+    
+    finally:
+        driver.quit()

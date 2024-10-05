@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from . import schemas, queries
 from ..database import get_db
 from sqlalchemy.orm import Session
-from scrappers.amazon.comments import get_comments  
+from scrappers.amazon.comments import get_product_info_and_comments  
 from scrappers.amazon.search import amazon_search
 from .amazon_models import TrackedUrls
 
@@ -52,14 +52,16 @@ def remove_tracked_url(id: str, db: Session = Depends(get_db)):
 @router.post("/get_comments", status_code=200)
 def get_amazon_comments(comment_input: schemas.CommentInput):
     try:
-        # Assuming get_comments fetches the comments from Amazon
-        comments = get_comments(url=str(comment_input.url))
+        # Fetch both comments and product description from the Amazon URL
+        product_info = get_product_info_and_comments(url=str(comment_input.url))
+        comments = product_info.get("comments", [])
+        product_description = product_info.get("product_description", [])
         file_name = comment_input.file_name
 
-        if comments is None or len(comments) == 0:
-            raise HTTPException(status_code=404, detail="No comments found for the provided URL.")
+        if not comments and not product_description:
+            raise HTTPException(status_code=404, detail="No comments or product description found for the provided URL.")
 
-        # Define the folder path where the PDF will be saved
+        # Define the folder path where the file will be saved
         folder_path = Path("./amazon_comments")
 
         # Create the folder if it doesn't exist
@@ -68,18 +70,22 @@ def get_amazon_comments(comment_input: schemas.CommentInput):
         # Combine folder path and file name
         file_path = folder_path / file_name
 
-        # Save the comments in a file within the amazon_comments folder
+        # Save the comments and product description in a file
         with open(file_path, "w") as file:
+            file.write("Product Description:\n")
+            for description in product_description:
+                file.write(description + "\n")
+            
+            file.write("\nComments:\n")
             for comment in comments:
                 file.write(comment + "\n")
 
-        return {"message": "Comments successfully written to file.", "file_path": str(file_path)}
+        return {"message": "Product description and comments successfully written to file.", "file_path": str(file_path)}
 
     except TypeError as e:
         raise HTTPException(status_code=500, detail=f"Type error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
-
 
 class ProductResponse(BaseModel):
     id: int
@@ -98,9 +104,6 @@ class ProductDetailsResponse(BaseModel):
 
 class ProductDetailsResponseList(BaseModel):
     products: List[ProductDetailsResponse]
-
-class TableNameInput(BaseModel):
-    table_name: str
 
 def connect_to_database(db_name):
     """Connect to the SQLite database."""
@@ -152,13 +155,13 @@ def quote_sql_identifier(identifier: str) -> str:
     # Safely quote the table name with backticks
     return f'`{identifier}`'
 
-@router.post("/frontend_data", response_model=ProductResponse)
-def get_frontend_data(input: TableNameInput):
+@router.get("/frontend_data/{id}", response_model=ProductResponse)
+def get_frontend_data(id: str):
     """Endpoint to get the first complete product from the specified table."""
     database_name = "hackathon.db"  # Specify your database name
     
     # Quote the table name to safely use it in the SQL query
-    quoted_table_name = quote_sql_identifier(input.table_name)
+    quoted_table_name = quote_sql_identifier(id)
     
     first_product = get_first_complete_product(database_name, quoted_table_name)
     
@@ -192,13 +195,13 @@ def get_all_product_details(db_name, table_name):
     
     return result
 
-@router.post("/graph_details", response_model=ProductDetailsResponseList)  # Change here
-def get_graph_details_route(input: TableNameInput):
+@router.get("/graph_details/{id}", response_model=ProductDetailsResponseList)  # Change here
+def get_graph_details_route(id: str):
     """Endpoint to get the in_stock, price, and timestamp of all complete products."""
     database_name = "hackathon.db"
     
     # Quote the table name to safely use it in the SQL query
-    quoted_table_name = quote_sql_identifier(input.table_name)
+    quoted_table_name = quote_sql_identifier(id)
     
     product_details_list = get_all_product_details(database_name, quoted_table_name)
 

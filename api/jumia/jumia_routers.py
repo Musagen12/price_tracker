@@ -1,4 +1,5 @@
 import sqlite3
+import os
 import re
 from datetime import datetime
 from typing import List
@@ -7,7 +8,7 @@ from pydantic import BaseModel
 from . import schemas, queries
 from ..database import get_db
 from sqlalchemy.orm import Session
-from scrappers.jumia.comments import get_jumia_comments  
+from scrappers.jumia.comments import get_jumia_product_info  
 from scrappers.jumia.search import jumia_search
 from .jumia_models import JumiaTrackedUrls
 
@@ -48,29 +49,46 @@ def remove_tracked_url(id: str, db: Session = Depends(get_db)):
     url_query.delete(synchronize_session=False)
     db.commit()
 
+output_folder = "amazon_comments"
+os.makedirs(output_folder, exist_ok=True)
+
 @router.post("/get_comments", status_code=200)
 def get_all_jumia_comments(comment_input: schemas.CommentInput):
     try:
-        # Fetch the comments using the scraper
-        comments = get_jumia_comments(url=str(comment_input.url))
-        file_name = comment_input.file_name
+        # Fetch the product details and comments using the scraper
+        comments_info = get_jumia_product_info(url=str(comment_input.url))
 
+        # Extract product details and comments
+        product_details = comments_info.get("product_details", {})
+        comments = comments_info.get("reviews", [])
+
+        file_name = comment_input.file_name
+        
         if comments is None or len(comments) == 0:
             raise HTTPException(status_code=404, detail="No comments found for the provided URL.")
 
-        # Write the comments into a file
-        with open(file_name, "w", encoding="utf-8") as file:  # Ensure correct encoding
+        # Construct the full file path using the 'amazon_comments' folder
+        file_path = os.path.join(output_folder, file_name)
+
+        # Write the product details and comments into a file
+        with open(file_path, "w", encoding="utf-8") as file:  # Ensure correct encoding
+            # Write product details
+            file.write("Product Details:\n")
+            for key, value in product_details.items():
+                file.write(f"{key}: {value}\n")
+
+            file.write("\nComments:\n")
             for comment in comments:
                 if isinstance(comment, dict):  # If comment is a dictionary
                     formatted_comment = ", ".join(f"{key}: {value}" for key, value in comment.items())  # Format dict
                 elif isinstance(comment, tuple):  # If comment is a tuple
-                    formatted_comment = " | ".join(str(item) for item in comment)  # Join tuple elements
+                    formatted_comment = " | ".join(str(item) for item in comment)  # Corrected line
                 else:  # If comment is something else (string, etc.)
                     formatted_comment = str(comment)
 
                 file.write(formatted_comment + "\n")  # Write each formatted comment on a new line
 
-        return {"message": "Comments successfully written to file."}
+        return {"message": f"Comments successfully written to {file_path}."}
 
     except TypeError as e:
         raise HTTPException(status_code=500, detail=f"Type error: {str(e)}")
@@ -94,9 +112,6 @@ class ProductDetailsResponse(BaseModel):
 
 class ProductDetailsResponseList(BaseModel):
     products: List[ProductDetailsResponse]
-
-class TableNameInput(BaseModel):
-    table_name: str
 
 def connect_to_database(db_name):
     """Connect to the SQLite database."""
@@ -148,18 +163,17 @@ def quote_sql_identifier(identifier: str) -> str:
     # Safely quote the table name with backticks
     return f'`{identifier}`'
 
-@router.post("/frontend_data", response_model=ProductResponse)
-def get_frontend_data(input: TableNameInput):
+@router.get("/frontend_data/{id}", response_model=ProductResponse)
+def get_frontend_data(id: str):
     """Endpoint to get the first complete product from the specified table."""
-    database_name = "hackathon.db"  # Specify your database name
+    database_name = "hackathon.db" 
     
-    # Quote the table name to safely use it in the SQL query
-    quoted_table_name = quote_sql_identifier(input.table_name)
+    quoted_table_name = quote_sql_identifier(id)
     
     first_product = get_first_complete_product(database_name, quoted_table_name)
     
     if first_product:
-        product = first_product[0]  #
+        product = first_product[0]  
         return ProductResponse(
             id=product[0],
             name=product[1],
@@ -188,13 +202,13 @@ def get_all_product_details(db_name, table_name):
     
     return result
 
-@router.post("/graph_details", response_model=ProductDetailsResponseList)  # Change here
-def get_graph_details_route(input: TableNameInput):
+@router.get("/graph_details/{id}", response_model=ProductDetailsResponseList)  # Change here
+def get_graph_details_route(id: str):
     """Endpoint to get the in_stock, price, and timestamp of all complete products."""
     database_name = "hackathon.db"
     
     # Quote the table name to safely use it in the SQL query
-    quoted_table_name = quote_sql_identifier(input.table_name)
+    quoted_table_name = quote_sql_identifier(id)
     
     product_details_list = get_all_product_details(database_name, quoted_table_name)
 
