@@ -14,8 +14,11 @@ celery
 uvicorn
 setuptools
 pypdf
+redis
 PyPDF2
 langchain[llms]
 langchain-community
 chromadb
 langchain-chroma
+pika
+APScheduler

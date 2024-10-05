@@ -1,4 +1,9 @@
+import sqlite3
+import re
+from datetime import datetime
+from typing import List
 from fastapi import APIRouter, HTTPException, Depends, status
+from pydantic import BaseModel
 from . import schemas, queries
 from ..database import get_db
 from sqlalchemy.orm import Session
@@ -71,3 +76,138 @@ def get_all_jumia_comments(comment_input: schemas.CommentInput):
         raise HTTPException(status_code=500, detail=f"Type error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+class ProductResponse(BaseModel):
+    id: int
+    name: str
+    in_stock: str
+    rating: str
+    image_source: str
+    price: float
+    timestamp: datetime
+
+
+class ProductDetailsResponse(BaseModel):
+    in_stock: str
+    price: float
+    timestamp: datetime
+
+class ProductDetailsResponseList(BaseModel):
+    products: List[ProductDetailsResponse]
+
+class TableNameInput(BaseModel):
+    table_name: str
+
+def connect_to_database(db_name):
+    """Connect to the SQLite database."""
+    return sqlite3.connect(db_name)
+
+def create_cursor(connection):
+    """Create a cursor object from the database connection."""
+    return connection.cursor()
+
+def execute_query(cursor, query, params=None):
+    """Execute a given SQL query and return the results."""
+    if params:
+        cursor.execute(query, params)
+    else:
+        cursor.execute(query)
+    return cursor.fetchall()  
+
+def close_resources(cursor, connection):
+    """Close the cursor and the database connection."""
+    cursor.close()
+    connection.close()
+
+def get_first_complete_product(db_name, table_name):
+    """Fetch the first product with all fields completely filled from the database."""
+    query = """
+        SELECT id, name, in_stock, rating, image_source, price, timestamp 
+        FROM {} 
+        WHERE id IS NOT NULL 
+          AND name IS NOT NULL 
+          AND name != '' 
+          AND name != 'Name not found' 
+          AND price IS NOT NULL 
+        LIMIT 1;  -- Only get the first complete product
+    """.format(table_name)  # Table names cannot be parameterized, so we format them.
+
+    conn = connect_to_database(db_name)
+    cursor = create_cursor(conn)
+    try:
+        result = execute_query(cursor, query)
+    finally:
+        close_resources(cursor, conn)
+    
+    return result
+
+def quote_sql_identifier(identifier: str) -> str:
+    """Safely quote an SQL identifier like a table name."""
+    # Replace any existing backticks to avoid injection risks
+    identifier = identifier.replace("`", "``")
+    # Safely quote the table name with backticks
+    return f'`{identifier}`'
+
+@router.post("/frontend_data", response_model=ProductResponse)
+def get_frontend_data(input: TableNameInput):
+    """Endpoint to get the first complete product from the specified table."""
+    database_name = "hackathon.db"  # Specify your database name
+    
+    # Quote the table name to safely use it in the SQL query
+    quoted_table_name = quote_sql_identifier(input.table_name)
+    
+    first_product = get_first_complete_product(database_name, quoted_table_name)
+    
+    if first_product:
+        product = first_product[0]  #
+        return ProductResponse(
+            id=product[0],
+            name=product[1],
+            in_stock=product[2],
+            rating=product[3],
+            image_source=product[4],
+            price=product[5],
+            timestamp=product[6]
+        )
+    else:
+        raise HTTPException(status_code=404, detail="No complete products found.")
+
+def get_all_product_details(db_name, table_name):
+    """Fetch all products' in_stock, price, and timestamp from the database."""
+    query = f"""
+    SELECT in_stock, price, timestamp 
+    FROM {table_name}
+    """
+    
+    conn = connect_to_database(db_name)
+    cursor = create_cursor(conn)
+    try:
+        result = execute_query(cursor, query)
+    finally:
+        close_resources(cursor, conn)
+    
+    return result
+
+@router.post("/graph_details", response_model=ProductDetailsResponseList)  # Change here
+def get_graph_details_route(input: TableNameInput):
+    """Endpoint to get the in_stock, price, and timestamp of all complete products."""
+    database_name = "hackathon.db"
+    
+    # Quote the table name to safely use it in the SQL query
+    quoted_table_name = quote_sql_identifier(input.table_name)
+    
+    product_details_list = get_all_product_details(database_name, quoted_table_name)
+
+    if product_details_list:
+        products = [
+            ProductDetailsResponse(
+                in_stock=product[0],       
+                price=product[1],          
+                timestamp=product[2]
+            )
+            for product in product_details_list
+        ]
+        
+        return ProductDetailsResponseList(products=products)  # Return the list here
+    else:
+        raise HTTPException(status_code=404, detail="No complete products found.")

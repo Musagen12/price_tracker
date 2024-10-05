@@ -35,23 +35,6 @@ def populate_chroma_db(reset: bool = False):
         print(f"Error populating database: {e}")
         return {"message": f"Error populating database: {str(e)}"}
 
-
-# def load_text_documents(directory: str):
-#     """Load all .txt files from the specified directory."""
-#     documents = []
-#     for filename in os.listdir(directory):
-#         if filename.endswith(".txt"):
-#             file_path = os.path.join(directory, filename)
-#             print(f"Loading file: {file_path}")  # Add a print statement
-#             with open(file_path, "r", encoding="utf-8") as file:
-#                 text = file.read()
-#                 documents.append({
-#                     "page_content": text, 
-#                     "metadata": {"source": filename}
-#                 })
-#     print(f"Number of documents loaded: {len(documents)}")
-#     return documents
-
 def load_text_documents(directory: str):
     """Load all .txt files from the specified directory."""
     documents = []
@@ -66,17 +49,6 @@ def load_text_documents(directory: str):
                     metadata={"source": filename}
                 ))
     return documents
-
-
-# def split_documents(documents: list):
-#     """Split documents into chunks using RecursiveCharacterTextSplitter."""
-#     text_splitter = RecursiveCharacterTextSplitter(
-#         chunk_size=800,
-#         chunk_overlap=80
-#     )
-#     chunks = text_splitter.split_documents(documents)
-#     print(f"Number of chunks created: {len(chunks)}")  # Debug chunk count
-#     return chunks
 
 def split_documents(documents: list):
     """Split documents into chunks using RecursiveCharacterTextSplitter."""

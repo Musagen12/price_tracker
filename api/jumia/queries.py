@@ -3,11 +3,10 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import Column, Integer, String, Float, inspect, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-from scrappers.jumia.individual import get_individual_jumia_item  # Ensure this function is async
+from scrappers.jumia.individual import get_individual_jumia_item  # Ensure this function is synchronous
 from ..database import get_db
 from .jumia_models import JumiaTrackedUrls
 from .schemas import TrackedUrlInput
-import asyncio
 
 Base = declarative_base()
 dynamic_tables = {}
@@ -59,7 +58,7 @@ def create_table_for_uuid(engine, uuid_str):
 
         return _UUIDData
 
-async def save_product_data(uuid_str: str, product_data: dict, db: Session):
+def save_product_data(uuid_str: str, product_data: dict, db: Session):
     """Save product data to the dynamically created or retrieved table."""
     if not product_data:
         print(f"No product data to save for UUID '{uuid_str}'")
@@ -95,27 +94,28 @@ async def save_product_data(uuid_str: str, product_data: dict, db: Session):
         print(f"Error saving data for UUID '{uuid_str}': {str(e)}")
         db.rollback()
 
-async def process_url(url_entry, db: Session):
+def process_url(url_entry, db: Session):
     """Process a single URL entry."""
     try:
         print(f"Processing URL: {url_entry.url}")
-        product_data = await get_individual_jumia_item(url=url_entry.url)
+        product_data = get_individual_jumia_item(url=url_entry.url)
         print(f"Product data received: {product_data}")
 
         if product_data is None:
             print(f"Error: No product data returned for URL '{url_entry.url}'")
             return
 
-        await save_product_data(url_entry.id, product_data, db)
+        save_product_data(url_entry.id, product_data, db)
 
     except Exception as e:
         print(f"Error processing URL '{url_entry.url}': {str(e)}")
 
-async def automate_jumia(db: Session = Depends(get_db)):
+def automate_jumia(db: Session = Depends(get_db)):
     """Automate the scraping and saving of product data for tracked URLs."""
     urls = db.query(JumiaTrackedUrls).all()
-    tasks = [process_url(url_entry, db) for url_entry in urls]
-    await asyncio.gather(*tasks)
+    
+    for url_entry in urls:
+        process_url(url_entry, db)
 
 def input_url(url_input: TrackedUrlInput, db: Session = Depends(get_db)):
     saved_url = JumiaTrackedUrls(url=str(url_input.url))  
