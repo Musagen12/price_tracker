@@ -1,4 +1,6 @@
-import React from 'react';
+// /src/components/Graph.jsx
+
+import React, { useState } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -23,6 +25,10 @@ ChartJS.register(
 );
 
 const GraphWithForm = ({ labels, dataPoints }) => {
+  const [notification, setNotification] = useState(null);
+  const [targetPrice, setTargetPrice] = useState('');
+  const [email, setEmail] = useState('');
+
   const data = {
     labels: labels,
     datasets: [
@@ -36,18 +42,51 @@ const GraphWithForm = ({ labels, dataPoints }) => {
     ],
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+  
+    try {
+      const response = await fetch('/api/sendEmail', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, targetPrice }),
+      });
+  
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const result = await response.json();
+        console.log(result);
+        if (response.ok) {
+          setNotification('Email sent successfully!');
+        } else {
+          setNotification(result.error || 'Failed to send email. Please try again.');
+        }
+      } else {
+        const text = await response.text();
+        console.error('Unexpected response:', text);
+        setNotification('An unexpected error occurred.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setNotification('An error occurred while sending the email.');
+    }
+  
+    setTargetPrice('');
+    setEmail('');
+  };
+  
   return (
     <div className="flex flex-col h-screen p-4 bg-white">
       <div className="flex flex-1 space-x-4">
-        {/* Graph Section */}
         <div className="flex-1 h-full">
           <Line data={data} />
         </div>
 
-        {/* Form Section */}
         <div className="w-80">
           <h2 className="text-lg font-bold mb-4">Set Target & Notify</h2>
-          <form action="#" method="POST" className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="target" className="block text-sm font-medium leading-6 text-gray-900">
                 Target Price
@@ -57,6 +96,8 @@ const GraphWithForm = ({ labels, dataPoints }) => {
                   id="target"
                   name="target"
                   type="number"
+                  value={targetPrice}
+                  onChange={(e) => setTargetPrice(e.target.value)}
                   required
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
@@ -72,8 +113,9 @@ const GraphWithForm = ({ labels, dataPoints }) => {
                   id="email"
                   name="email"
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
-                  autoComplete="email"
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
               </div>
@@ -88,6 +130,12 @@ const GraphWithForm = ({ labels, dataPoints }) => {
               </button>
             </div>
           </form>
+
+          {notification && (
+            <div className="mt-4 p-3 rounded-md bg-green-100 text-green-800 flex items-center">
+              <span>{notification}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
