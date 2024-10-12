@@ -22,5 +22,4 @@ chromadb
 langchain-chroma
 pika
 APScheduler
-mailersend
-tavily-python
+langchain-ollama
