@@ -51,7 +51,7 @@ export default function ChatBot() {
 
       const result = await response.json()
       if (response.ok) {
-        setGeneratedText(result.detail) // Update with the response
+        setGeneratedText(result.response) // Update with the response
       } else {
         setGeneratedText('Error: ' + result.detail) // Handle errors from the server
       }

@@ -1,44 +1,54 @@
 // /src/app/api/sendEmail/route.js
-
-import nodemailer from 'nodemailer';
+import 'dotenv/config';
+import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
+import { addPriceCheck } from '../../../db/db'; // Import your database function
 
 export async function POST(request) {
-  console.log('API Handler Invoked'); // Debugging log
   try {
-    const { email, targetPrice } = await request.json();
-    console.log(`Received email: ${email}, targetPrice: ${targetPrice}`); // Debugging log
+    const { email, targetPrice, productId } = await request.json();  // Get productId
+    if (!email || !targetPrice || !productId) {  // Validate productId
+      throw new Error('Email, targetPrice, and productId are required.');
+    }
 
-    // Create a transporter object using Gmail SMTP
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER, // Email stored in environment variable
-        pass: process.env.EMAIL_PASS, // Email password stored securely (App Password)
-      },
-    });
+    // Save the email, targetPrice, and productId to the database
+    addPriceCheck(email, targetPrice, productId);
 
-    // Set the mail options
-    const mailOptions = {
-      from: process.env.EMAIL_USER, // Sender address
-      to: email, // Receiver email from the form
-      subject: 'Target Price Notification',
-      text: `Your target price has been set at $${targetPrice}.`, // Plain text body
-    };
+    // Proceed with sending the email as before...
+    const mailerSend = new MailerSend({ apiKey: process.env.MAILERSEND_API_KEY });
+    const sentFrom = new Sender("MS_k9qFH7@trial-0r83ql3563v4zw1j.mlsender.net", "Price Tracker");
+    const recipients = [new Recipient(email, "Your Client")];
 
-    // Send the email
-    await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully'); // Debugging log
+    const personalization = [{
+      email: email,
+      data: {
+        email: email,
+        product_id: productId,  // Include productId in email data
+        targetPrice: targetPrice
+      }
+    }];
 
-    // Always send back a JSON response
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setTo(recipients)
+      .setReplyTo(sentFrom)
+      .setSubject("Target Price Notification")
+      .setTemplateId('z86org8797elew13')
+      .setPersonalization(personalization);
+    
+    await mailerSend.email.send(emailParams);
+    
     return new Response(JSON.stringify({ message: 'Email sent successfully!' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error sending email:', error);
-    return new Response(JSON.stringify({ error: 'Failed to send email' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Error sending email:', error.message || error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to send email: ' + (error.message || 'Unknown error') }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }

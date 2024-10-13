@@ -42,7 +42,7 @@ export default function TrackItem() {
   useEffect(() => {
     const fetchGraphDetails = async () => {
       try {
-        const response = await axios.get(`http://localhost:8000/amazon/graph_details/${id}`);
+        const response = await axios.get(`http://localhost:8080/amazon/graph_details/${id}`);
         const productDetails = response.data.products;
 
         // Extracting labels (timestamps) and data points (prices)
@@ -106,7 +106,7 @@ export default function TrackItem() {
 useEffect(() => {
   const fetchTrackedUrl = async () => {
     try {
-      const response = await axios.get(`http://localhost:8000/amazon/get_tracked_url`);
+      const response = await axios.get(`http://localhost:8080/amazon/get_tracked_url`);
       const trackedUrls = response.data;
 
       // Find the URL with the matching ID
@@ -148,6 +148,7 @@ const handleChatClick = () => {
     file_name: filename,
   })
   .then(response => {
+    axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/populate_db`)
     alert('File and product URL sent successfully.');
   })
   .catch(error => {
@@ -257,9 +258,9 @@ const renderContent = () => {
     case 'graph':
       return (
         <div className="p-4">
-          <h2 className="text-xl font-semibold mb-4">Product Price Graph</h2>
+          <h2 className="text-xl font-semibold mb-4">Product Price Graph  {id}</h2>
           {graphData.labels.length > 0 ? (
-            <Graph labels={graphData.labels} dataPoints={graphData.dataPoints} />
+            <Graph labels={graphData.labels} dataPoints={graphData.dataPoints} productId={id}/>
           ) : (
             <p>Loading graph data...</p>
           )}

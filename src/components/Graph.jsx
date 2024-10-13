@@ -1,6 +1,4 @@
-// /src/components/Graph.jsx
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -23,8 +21,8 @@ ChartJS.register(
   Tooltip,
   Legend
 );
-
-const GraphWithForm = ({ labels, dataPoints }) => {
+// GraphWithForm Component
+const GraphWithForm = ({ labels, dataPoints, productId }) => {
   const [notification, setNotification] = useState(null);
   const [targetPrice, setTargetPrice] = useState('');
   const [email, setEmail] = useState('');
@@ -45,19 +43,21 @@ const GraphWithForm = ({ labels, dataPoints }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
   
+    if (!productId) {
+      setNotification('Product ID is required.');
+      return;
+    }
+  
     try {
       const response = await fetch('/api/sendEmail', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, targetPrice }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, targetPrice, productId })  // Include productId
       });
   
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         const result = await response.json();
-        console.log(result);
         if (response.ok) {
           setNotification('Email sent successfully!');
         } else {
@@ -65,11 +65,9 @@ const GraphWithForm = ({ labels, dataPoints }) => {
         }
       } else {
         const text = await response.text();
-        console.error('Unexpected response:', text);
         setNotification('An unexpected error occurred.');
       }
     } catch (error) {
-      console.error('Error:', error);
       setNotification('An error occurred while sending the email.');
     }
   
@@ -77,6 +75,7 @@ const GraphWithForm = ({ labels, dataPoints }) => {
     setEmail('');
   };
   
+
   return (
     <div className="flex flex-col h-screen p-4 bg-white">
       <div className="flex flex-1 space-x-4">
@@ -87,6 +86,22 @@ const GraphWithForm = ({ labels, dataPoints }) => {
         <div className="w-80">
           <h2 className="text-lg font-bold mb-4">Set Target & Notify</h2>
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="id" className="block text-sm font-medium leading-6 text-gray-900">
+                Product ID
+              </label>
+              <div className="mt-2">
+                <input
+                  id="id"
+                  name="id"
+                  type="text"
+                  value={productId}
+                  readOnly
+                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
+
             <div>
               <label htmlFor="target" className="block text-sm font-medium leading-6 text-gray-900">
                 Target Price
