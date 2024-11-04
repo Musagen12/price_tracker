@@ -1,6 +1,8 @@
 import sqlite3
 import os
 import re
+import string
+import random
 from datetime import datetime
 from typing import List
 from fastapi import APIRouter, HTTPException, Depends, status
@@ -18,11 +20,24 @@ router = APIRouter(
 )
 
 
+def generate_unique_code(length=8):
+    characters = string.ascii_lowercase + string.digits
+    return ''.join(random.choice(characters) for _ in range(length))
+
 @router.post("/search", status_code=200)
 def search(search_input: schemas.SearchInput):
     query = search_input.query
-    product_list = jumia_search(query)
-    return product_list
+    product_response = jumia_search(query)
+    product_list = product_response.get("products", [])
+    updated_product_list = []
+    
+    for product in product_list:
+        if isinstance(product, dict):
+            unique_code = generate_unique_code()
+            updated_product = {**product, "unique_code": str(unique_code)}
+            updated_product_list.append(updated_product)
+
+    return updated_product_list
 
 
 @router.post("/add_tracked_url", response_model=schemas.TrackedUrlResponse, status_code=201)

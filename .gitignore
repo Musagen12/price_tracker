@@ -8,3 +8,13 @@ celerybeat-schedule.db
 /.ollama
 /.pki
 /.th-client
+/__pycache__
+/chroma
+/scheduler/__pycache__
+/api/__pycache__
+/amazon_comments
+/api/amazon/__pycache__
+/api/jumia/__pycache__
+/scrappers/__pycache__
+/scrappers/amazon/__pycache__
+/scrappers/jumia/__pycache__

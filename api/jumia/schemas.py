@@ -32,6 +32,7 @@ class Product(BaseModel):
     in_stock: str
     image_url: HttpUrl
     url: Optional[HttpUrl] = None
+    unique_code: str
 
 class ProductList(BaseModel):
     products: List[Product]

@@ -25,6 +25,7 @@ class TrackedUrlResponse(BaseModel):
         from_attributes = True
 
 class Product(BaseModel):
+    unique_code: str
     asin: str
     name: str
     price: float

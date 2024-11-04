@@ -1,5 +1,8 @@
 import os
 import sqlite3
+import string
+import random
+import json
 from fastapi import APIRouter, HTTPException, Depends, status
 from datetime import datetime
 from typing import List
@@ -17,13 +20,24 @@ router = APIRouter(
     tags=["Amazon"]
 )
 
+# Helper function to generate unique codes
+def generate_unique_code(length=8):
+    characters = string.ascii_lowercase + string.digits
+    return ''.join(random.choice(characters) for _ in range(length))
+
 
 @router.post("/search", status_code=200)
 def search(search_input: schemas.SearchInput):
     query = search_input.query
     product_list = amazon_search(query)
-    return product_list
 
+    updated_product_list = []
+    for product in product_list:
+        unique_code = generate_unique_code()
+        updated_product = {**product, "unique_code": str(unique_code)}
+        updated_product_list.append(updated_product)
+
+    return updated_product_list
 
 @router.post("/add_tracked_url", response_model=schemas.TrackedUrlResponse, status_code=201)
 def add_tracked_url(url: schemas.TrackedUrlInput, db: Session = Depends(get_db)):
