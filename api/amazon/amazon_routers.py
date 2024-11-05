@@ -3,6 +3,7 @@ import sqlite3
 import string
 import random
 import json
+import redis
 from fastapi import APIRouter, HTTPException, Depends, status
 from datetime import datetime
 from typing import List
@@ -14,6 +15,8 @@ from sqlalchemy.orm import Session
 from scrappers.amazon.comments import get_product_info_and_comments  
 from scrappers.amazon.search import amazon_search
 from .amazon_models import TrackedUrls
+
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
 router = APIRouter(
     prefix="/amazon",
@@ -37,8 +40,11 @@ def search(search_input: schemas.SearchInput):
         updated_product = {**product, "unique_code": str(unique_code)}
         updated_product_list.append(updated_product)
 
-    return updated_product_list
+        # Save each product with a TTL of 1 hour (3600 seconds)
+        redis_client.setex(unique_code, 3600, json.dumps(updated_product))
 
+    return updated_product_list
+    
 @router.post("/add_tracked_url", response_model=schemas.TrackedUrlResponse, status_code=201)
 def add_tracked_url(url: schemas.TrackedUrlInput, db: Session = Depends(get_db)):
     tracked_url = queries.input_url(url, db)

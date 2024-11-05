@@ -18,6 +18,7 @@ redis
 PyPDF2
 langchain[llms]
 langchain-community
+langchain_ollama
 chromadb
 langchain-chroma
 pika

@@ -60,7 +60,7 @@ def split_documents(documents: list):
 
 
 def add_to_chroma(chunks: list):
-    """Add the text chunks to the Chroma DB."""
+    """Convert the chunks into embeddings then store them in chromadb a vector database."""
     embedding_function = get_embedding_function()
     db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
     

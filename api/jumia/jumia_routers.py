@@ -3,6 +3,8 @@ import os
 import re
 import string
 import random
+import redis
+import json
 from datetime import datetime
 from typing import List
 from fastapi import APIRouter, HTTPException, Depends, status
@@ -13,6 +15,8 @@ from sqlalchemy.orm import Session
 from scrappers.jumia.comments import get_jumia_product_info  
 from scrappers.jumia.search import jumia_search
 from .jumia_models import JumiaTrackedUrls
+
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
 router = APIRouter(
     prefix="/jumia",
@@ -36,6 +40,9 @@ def search(search_input: schemas.SearchInput):
             unique_code = generate_unique_code()
             updated_product = {**product, "unique_code": str(unique_code)}
             updated_product_list.append(updated_product)
+
+            # Save each product with a TTL of 1 hour (3600 seconds)
+            redis_client.setex(unique_code, 3600, json.dumps(updated_product))
 
     return updated_product_list
 

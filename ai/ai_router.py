@@ -17,7 +17,6 @@ class QueryRequest(BaseModel):
 # Chroma database path
 CHROMA_PATH = "chroma"
 
-# Modified prompt template to handle Chroma data only
 PROMPT_TEMPLATE = """
 You are an assistant specialized in retrieving information from specific documents.
 Below is the content from documents with the name "{document_name}". Use this content to answer the question as accurately as possible.
